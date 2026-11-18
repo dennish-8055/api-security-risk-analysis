@@ -1,0 +1,8 @@
+# FUTURE INTERNS - CYBER SECURITY TASK 3 (2026)
+# API Security Risk Analysis Tool Dependencies
+
+# HTTP client library for secure, read-only GET requests
+requests>=2.31.0
+
+# PDF generation engine for professional security reports
+reportlab>=4.0.0

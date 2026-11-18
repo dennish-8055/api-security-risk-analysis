@@ -1,0 +1,643 @@
+{
+  "metadata": {
+    "project": "FUTURE INTERNS - CYBER SECURITY TASK 3 (2026)",
+    "assessment_target": "https://jsonplaceholder.typicode.com",
+    "assessment_type": "Defensive Read-Only REST API Security Review",
+    "execution_timestamp": "2026-11-18 18:54:42 UTC",
+    "total_endpoints_audited": 6,
+    "total_findings": 7
+  },
+  "findings": [
+    {
+      "finding_id": "FIND-01",
+      "title": "Technology Fingerprinting via X-Powered-By Header",
+      "category": "Configuration & Header Security",
+      "owasp_category": "API8:2023 - Security Misconfiguration",
+      "affected_endpoint": "All 6 Audited Endpoints (/posts, /posts/1, /users, /users/1, /comments?postId=1, /todos/1)",
+      "evidence": "HTTP response header 'x-powered-by: Express' returned across all 6 audited endpoints.",
+      "severity": "LOW",
+      "likelihood": "HIGH",
+      "business_impact": "Reveals backend runtime technology (Express.js) to potential adversaries. While not directly exploitable alone, it assists attackers in crafting targeted exploits against framework-specific CVEs.",
+      "recommendation": "Disable the 'x-powered-by' header in the application framework (e.g., in Express: app.disable('x-powered-by') or helmet.hidePoweredBy()).",
+      "testing_limitation": "None. Header presence verified directly in HTTP response."
+    },
+    {
+      "finding_id": "FIND-02",
+      "title": "Missing HTTP Strict Transport Security (HSTS) Header",
+      "category": "Transport Security",
+      "owasp_category": "API8:2023 - Security Misconfiguration",
+      "affected_endpoint": "All 6 Audited Endpoints (/posts, /posts/1, /users, /users/1, /comments?postId=1, /todos/1)",
+      "evidence": "Strict-Transport-Security header is absent across all 6 audited endpoints.",
+      "severity": "LOW",
+      "likelihood": "LOW",
+      "business_impact": "Without HSTS, web browsers interacting with this API domain might allow unencrypted HTTP fallback or SSL stripping on initial connection. For pure programmatic API clients with HTTPS hardcoded, impact is minimal.",
+      "recommendation": "Add 'Strict-Transport-Security: max-age=31536000; includeSubDomains; preload' at the edge proxy, load balancer, or web server.",
+      "testing_limitation": "None. Header absence verified directly across audited endpoints."
+    },
+    {
+      "finding_id": "FIND-03",
+      "title": "Permissive Cache-Control Policy on Data Endpoints",
+      "category": "Data Storage & Caching",
+      "owasp_category": "API8:2023 - Security Misconfiguration",
+      "affected_endpoint": "All 6 Audited Endpoints (/posts, /posts/1, /users, /users/1, /comments?postId=1, /todos/1)",
+      "evidence": "Cache-Control header returned with 'max-age=43200' across all 6 audited endpoints.",
+      "severity": "LOW",
+      "likelihood": "MEDIUM",
+      "business_impact": "In this mock API, responses contain static test fixtures, so caching is benign. However, in a production SaaS platform, caching responses containing user profiles or private records in shared intermediate caches (proxies, CDNs) risks exposing confidential information to unauthorized third parties.",
+      "recommendation": "In production environments, specify 'Cache-Control: no-store, no-cache, must-revalidate, private' on all authenticated API endpoints returning sensitive user data.",
+      "testing_limitation": "Assessed via response header inspection. Public mock data caching is intentional by design for JSONPlaceholder scalability."
+    },
+    {
+      "finding_id": "FIND-04",
+      "title": "Simulated Excessive Data Exposure (Synthetic PII)",
+      "category": "Data Minimization & Privacy",
+      "owasp_category": "API3:2023 - Broken Object Property Level Authorization",
+      "affected_endpoint": "/users, /users/1",
+      "evidence": "Unmasked synthetic PII fields returned in body: address, address.geo, address.geo.lat, address.geo.lng, address.zipcode, email.",
+      "severity": "INFORMATIONAL",
+      "likelihood": "N/A",
+      "business_impact": "On JSONPlaceholder, all data is synthetic fixture data explicitly created for testing and prototyping; no real personal data exists or is breached. In a production system, returning full phone numbers, addresses, and GPS coordinates on general queries without masking constitutes a severe privacy and compliance violation (GDPR, CCPA, OWASP API3).",
+      "recommendation": "Apply data minimization principles (filter/mask PII fields), implement strict Data Transfer Objects (DTOs), and enforce object property-level authorization.",
+      "testing_limitation": "Data was verified to be fictional mock data. No real human PII is hosted on JSONPlaceholder."
+    },
+    {
+      "finding_id": "FIND-05",
+      "title": "Exposed Rate-Limiting Quota Metadata",
+      "category": "Traffic & Resource Management",
+      "owasp_category": "API4:2023 - Unrestricted Resource Consumption",
+      "affected_endpoint": "/posts, /posts/1, /users, /users/1, /comments?postId=1, /todos/1",
+      "evidence": "Rate-limit headers exposed across endpoints (/posts: limit=3600000; /posts/1: limit=3600000; /users: limit=3600000; /users/1: limit=3600000; /comments?postId=1: limit=3600000; /todos/1: limit=1000).",
+      "severity": "INFORMATIONAL",
+      "likelihood": "LOW",
+      "business_impact": "The API transparently exposes its rate limit ceiling and remaining budget. While standard for developer ergonomics, attackers can monitor remaining budget to optimize scraping or denial-of-inventory thresholds without triggering alarms.",
+      "recommendation": "Standardize on RFC 7231 / RFC 6585 rate limiting (Retry-After) or standard IETF RateLimit headers; ensure backend enforces dynamic IP and token throttling.",
+      "testing_limitation": "Ethical read-only boundaries prohibited stress testing or quota exhaustion. Actual rate limit enforcement at scale was NOT tested."
+    },
+    {
+      "finding_id": "FIND-06",
+      "title": "Object-Level & Functional Authorization Verification",
+      "category": "Authentication & Authorization",
+      "owasp_category": "API1:2023 - Broken Object Level Authorization (BOLA)",
+      "affected_endpoint": "All Endpoints (/posts/1, /users/1, /todos/1, etc.)",
+      "evidence": "Endpoints are intentionally accessible to the public without authentication credentials.",
+      "severity": "NOT TESTABLE",
+      "likelihood": "N/A",
+      "business_impact": "NOT TESTABLE WITH SELECTED DEMO API. JSONPlaceholder is architected as an open mock REST server without user accounts, authentication tokens, or tenancy boundaries. No production authorization flaw can be inferred from open public demo endpoints.",
+      "recommendation": "For production APIs: Require OAuth 2.0 / OpenID Connect access tokens, and enforce contextual authorization checks verifying that requesting user id matches resource owner id.",
+      "testing_limitation": "Marked NOT TESTABLE WITH SELECTED DEMO API. Attempting authorization bypass or privilege escalation was neither possible nor ethically permissible."
+    },
+    {
+      "finding_id": "FIND-07",
+      "title": "Input Validation & Injection Resistance Under Defensive Testing",
+      "category": "Input Validation",
+      "owasp_category": "API8:2023 - Security Misconfiguration",
+      "affected_endpoint": "/comments?postId=1",
+      "evidence": "Standard query parameters accepted and parsed normally as integer identifiers.",
+      "severity": "NOT TESTABLE",
+      "likelihood": "N/A",
+      "business_impact": "NOT TESTABLE WITH SELECTED DEMO API under ethical rules. In accordance with the defensive, read-only testing scope, no active injection payloads (SQLi, NoSQLi, command injection) or malformed payloads were transmitted.",
+      "recommendation": "For production APIs: Implement strict server-side schema validation (JSON Schema / Pydantic), parameterized queries, and explicit type checking for all query string and body parameters.",
+      "testing_limitation": "Marked NOT TESTABLE WITH SELECTED DEMO API. Testing was strictly confined to safe GET requests with documented parameters."
+    }
+  ],
+  "endpoint_audit_details": [
+    {
+      "endpoint": "/posts",
+      "method": "GET",
+      "status_code": 200,
+      "content_type": "application/json; charset=utf-8",
+      "is_json": true,
+      "response_size_bytes": 27520,
+      "response_time_ms": 10452.68,
+      "header_checks": {
+        "present_security_headers": {
+          "X-Content-Type-Options": {
+            "header": "x-content-type-options",
+            "value": "nosniff",
+            "purpose": "Prevents MIME-type sniffing by clients.",
+            "browser_specific": true
+          },
+          "Cache-Control": {
+            "header": "cache-control",
+            "value": "max-age=43200",
+            "purpose": "Governs browser and proxy caching of potentially sensitive responses.",
+            "browser_specific": false
+          }
+        },
+        "missing_security_headers": {
+          "Strict-Transport-Security (HSTS)": {
+            "header": "strict-transport-security",
+            "purpose": "Enforces HTTPS connections and prevents SSL stripping attacks.",
+            "browser_specific": true,
+            "recommendation": "max-age=31536000; includeSubDomains; preload"
+          },
+          "Content-Security-Policy (CSP)": {
+            "header": "content-security-policy",
+            "purpose": "Restricts resource loading origins; mitigates XSS and injection in browsers.",
+            "browser_specific": true,
+            "recommendation": "default-src 'none'; frame-ancestors 'none'"
+          },
+          "X-Frame-Options": {
+            "header": "x-frame-options",
+            "purpose": "Prevents embedding in frames/iframes to protect against clickjacking.",
+            "browser_specific": true,
+            "recommendation": "DENY"
+          }
+        },
+        "information_disclosure": {
+          "server": "cloudflare",
+          "x-powered-by": "Express"
+        },
+        "caching_policy": {
+          "raw_value": "max-age=43200",
+          "is_cached": true,
+          "has_no_store": false,
+          "has_private": false,
+          "observation": "Response permits public/client caching without 'no-store'."
+        },
+        "cors_configuration": {
+          "access-control-allow-credentials": "true",
+          "vary": "Origin, Accept-Encoding"
+        },
+        "rate_limit_headers": {
+          "x-ratelimit-limit": "3600000",
+          "x-ratelimit-remaining": "3599998",
+          "x-ratelimit-reset": "1793985019"
+        }
+      },
+      "body_checks": {
+        "record_count": 100,
+        "data_type": "list",
+        "exposed_pii_fields": [],
+        "suspicious_keys_found": [],
+        "sample_structure": {
+          "userId": "int",
+          "id": "int",
+          "title": "str",
+          "body": "str"
+        },
+        "data_minimization_notes": []
+      },
+      "authentication_required": true
+    },
+    {
+      "endpoint": "/posts/1",
+      "method": "GET",
+      "status_code": 200,
+      "content_type": "application/json; charset=utf-8",
+      "is_json": true,
+      "response_size_bytes": 292,
+      "response_time_ms": 57.58,
+      "header_checks": {
+        "present_security_headers": {
+          "X-Content-Type-Options": {
+            "header": "x-content-type-options",
+            "value": "nosniff",
+            "purpose": "Prevents MIME-type sniffing by clients.",
+            "browser_specific": true
+          },
+          "Cache-Control": {
+            "header": "cache-control",
+            "value": "max-age=43200",
+            "purpose": "Governs browser and proxy caching of potentially sensitive responses.",
+            "browser_specific": false
+          }
+        },
+        "missing_security_headers": {
+          "Strict-Transport-Security (HSTS)": {
+            "header": "strict-transport-security",
+            "purpose": "Enforces HTTPS connections and prevents SSL stripping attacks.",
+            "browser_specific": true,
+            "recommendation": "max-age=31536000; includeSubDomains; preload"
+          },
+          "Content-Security-Policy (CSP)": {
+            "header": "content-security-policy",
+            "purpose": "Restricts resource loading origins; mitigates XSS and injection in browsers.",
+            "browser_specific": true,
+            "recommendation": "default-src 'none'; frame-ancestors 'none'"
+          },
+          "X-Frame-Options": {
+            "header": "x-frame-options",
+            "purpose": "Prevents embedding in frames/iframes to protect against clickjacking.",
+            "browser_specific": true,
+            "recommendation": "DENY"
+          }
+        },
+        "information_disclosure": {
+          "server": "cloudflare",
+          "x-powered-by": "Express"
+        },
+        "caching_policy": {
+          "raw_value": "max-age=43200",
+          "is_cached": true,
+          "has_no_store": false,
+          "has_private": false,
+          "observation": "Response permits public/client caching without 'no-store'."
+        },
+        "cors_configuration": {
+          "access-control-allow-credentials": "true",
+          "vary": "Origin, Accept-Encoding"
+        },
+        "rate_limit_headers": {
+          "x-ratelimit-limit": "3600000",
+          "x-ratelimit-remaining": "3599999",
+          "x-ratelimit-reset": "1790812826"
+        }
+      },
+      "body_checks": {
+        "record_count": 1,
+        "data_type": "dict",
+        "exposed_pii_fields": [],
+        "suspicious_keys_found": [],
+        "sample_structure": {
+          "userId": "int",
+          "id": "int",
+          "title": "str",
+          "body": "str"
+        },
+        "data_minimization_notes": []
+      },
+      "authentication_required": true
+    },
+    {
+      "endpoint": "/users",
+      "method": "GET",
+      "status_code": 200,
+      "content_type": "application/json; charset=utf-8",
+      "is_json": true,
+      "response_size_bytes": 5645,
+      "response_time_ms": 50.28,
+      "header_checks": {
+        "present_security_headers": {
+          "X-Content-Type-Options": {
+            "header": "x-content-type-options",
+            "value": "nosniff",
+            "purpose": "Prevents MIME-type sniffing by clients.",
+            "browser_specific": true
+          },
+          "Cache-Control": {
+            "header": "cache-control",
+            "value": "max-age=43200",
+            "purpose": "Governs browser and proxy caching of potentially sensitive responses.",
+            "browser_specific": false
+          }
+        },
+        "missing_security_headers": {
+          "Strict-Transport-Security (HSTS)": {
+            "header": "strict-transport-security",
+            "purpose": "Enforces HTTPS connections and prevents SSL stripping attacks.",
+            "browser_specific": true,
+            "recommendation": "max-age=31536000; includeSubDomains; preload"
+          },
+          "Content-Security-Policy (CSP)": {
+            "header": "content-security-policy",
+            "purpose": "Restricts resource loading origins; mitigates XSS and injection in browsers.",
+            "browser_specific": true,
+            "recommendation": "default-src 'none'; frame-ancestors 'none'"
+          },
+          "X-Frame-Options": {
+            "header": "x-frame-options",
+            "purpose": "Prevents embedding in frames/iframes to protect against clickjacking.",
+            "browser_specific": true,
+            "recommendation": "DENY"
+          }
+        },
+        "information_disclosure": {
+          "server": "cloudflare",
+          "x-powered-by": "Express"
+        },
+        "caching_policy": {
+          "raw_value": "max-age=43200",
+          "is_cached": true,
+          "has_no_store": false,
+          "has_private": false,
+          "observation": "Response permits public/client caching without 'no-store'."
+        },
+        "cors_configuration": {
+          "access-control-allow-credentials": "true",
+          "vary": "Origin, Accept-Encoding"
+        },
+        "rate_limit_headers": {
+          "x-ratelimit-limit": "3600000",
+          "x-ratelimit-remaining": "3599992",
+          "x-ratelimit-reset": "1790812826"
+        }
+      },
+      "body_checks": {
+        "record_count": 10,
+        "data_type": "list",
+        "exposed_pii_fields": [
+          "address",
+          "address.geo",
+          "address.geo.lat",
+          "address.geo.lng",
+          "address.zipcode",
+          "email",
+          "email (email-value)",
+          "phone"
+        ],
+        "suspicious_keys_found": [],
+        "sample_structure": {
+          "id": "int",
+          "name": "str",
+          "username": "str",
+          "email": "str",
+          "address": {
+            "street": "str",
+            "suite": "str",
+            "city": "str",
+            "zipcode": "str",
+            "geo": {
+              "lat": "str",
+              "lng": "str"
+            }
+          },
+          "phone": "str",
+          "website": "str",
+          "company": {
+            "name": "str",
+            "catchPhrase": "str",
+            "bs": "str"
+          }
+        },
+        "data_minimization_notes": [
+          "Endpoint returns contact information (email/phone) in plain text.",
+          "Endpoint returns detailed physical address and/or GPS geolocation coordinates."
+        ]
+      },
+      "authentication_required": true
+    },
+    {
+      "endpoint": "/users/1",
+      "method": "GET",
+      "status_code": 200,
+      "content_type": "application/json; charset=utf-8",
+      "is_json": true,
+      "response_size_bytes": 509,
+      "response_time_ms": 55.28,
+      "header_checks": {
+        "present_security_headers": {
+          "X-Content-Type-Options": {
+            "header": "x-content-type-options",
+            "value": "nosniff",
+            "purpose": "Prevents MIME-type sniffing by clients.",
+            "browser_specific": true
+          },
+          "Cache-Control": {
+            "header": "cache-control",
+            "value": "max-age=43200",
+            "purpose": "Governs browser and proxy caching of potentially sensitive responses.",
+            "browser_specific": false
+          }
+        },
+        "missing_security_headers": {
+          "Strict-Transport-Security (HSTS)": {
+            "header": "strict-transport-security",
+            "purpose": "Enforces HTTPS connections and prevents SSL stripping attacks.",
+            "browser_specific": true,
+            "recommendation": "max-age=31536000; includeSubDomains; preload"
+          },
+          "Content-Security-Policy (CSP)": {
+            "header": "content-security-policy",
+            "purpose": "Restricts resource loading origins; mitigates XSS and injection in browsers.",
+            "browser_specific": true,
+            "recommendation": "default-src 'none'; frame-ancestors 'none'"
+          },
+          "X-Frame-Options": {
+            "header": "x-frame-options",
+            "purpose": "Prevents embedding in frames/iframes to protect against clickjacking.",
+            "browser_specific": true,
+            "recommendation": "DENY"
+          }
+        },
+        "information_disclosure": {
+          "server": "cloudflare",
+          "x-powered-by": "Express"
+        },
+        "caching_policy": {
+          "raw_value": "max-age=43200",
+          "is_cached": true,
+          "has_no_store": false,
+          "has_private": false,
+          "observation": "Response permits public/client caching without 'no-store'."
+        },
+        "cors_configuration": {
+          "access-control-allow-credentials": "true",
+          "vary": "Origin, Accept-Encoding"
+        },
+        "rate_limit_headers": {
+          "x-ratelimit-limit": "3600000",
+          "x-ratelimit-remaining": "3599998",
+          "x-ratelimit-reset": "1790812826"
+        }
+      },
+      "body_checks": {
+        "record_count": 1,
+        "data_type": "dict",
+        "exposed_pii_fields": [
+          "address",
+          "address.geo",
+          "address.geo.lat",
+          "address.geo.lng",
+          "address.zipcode",
+          "email",
+          "email (email-value)",
+          "phone"
+        ],
+        "suspicious_keys_found": [],
+        "sample_structure": {
+          "id": "int",
+          "name": "str",
+          "username": "str",
+          "email": "str",
+          "address": {
+            "street": "str",
+            "suite": "str",
+            "city": "str",
+            "zipcode": "str",
+            "geo": {
+              "lat": "str",
+              "lng": "str"
+            }
+          },
+          "phone": "str",
+          "website": "str",
+          "company": {
+            "name": "str",
+            "catchPhrase": "str",
+            "bs": "str"
+          }
+        },
+        "data_minimization_notes": [
+          "Endpoint returns contact information (email/phone) in plain text.",
+          "Endpoint returns detailed physical address and/or GPS geolocation coordinates."
+        ]
+      },
+      "authentication_required": true
+    },
+    {
+      "endpoint": "/comments?postId=1",
+      "method": "GET",
+      "status_code": 200,
+      "content_type": "application/json; charset=utf-8",
+      "is_json": true,
+      "response_size_bytes": 1510,
+      "response_time_ms": 54.91,
+      "header_checks": {
+        "present_security_headers": {
+          "X-Content-Type-Options": {
+            "header": "x-content-type-options",
+            "value": "nosniff",
+            "purpose": "Prevents MIME-type sniffing by clients.",
+            "browser_specific": true
+          },
+          "Cache-Control": {
+            "header": "cache-control",
+            "value": "max-age=43200",
+            "purpose": "Governs browser and proxy caching of potentially sensitive responses.",
+            "browser_specific": false
+          }
+        },
+        "missing_security_headers": {
+          "Strict-Transport-Security (HSTS)": {
+            "header": "strict-transport-security",
+            "purpose": "Enforces HTTPS connections and prevents SSL stripping attacks.",
+            "browser_specific": true,
+            "recommendation": "max-age=31536000; includeSubDomains; preload"
+          },
+          "Content-Security-Policy (CSP)": {
+            "header": "content-security-policy",
+            "purpose": "Restricts resource loading origins; mitigates XSS and injection in browsers.",
+            "browser_specific": true,
+            "recommendation": "default-src 'none'; frame-ancestors 'none'"
+          },
+          "X-Frame-Options": {
+            "header": "x-frame-options",
+            "purpose": "Prevents embedding in frames/iframes to protect against clickjacking.",
+            "browser_specific": true,
+            "recommendation": "DENY"
+          }
+        },
+        "information_disclosure": {
+          "server": "cloudflare",
+          "x-powered-by": "Express"
+        },
+        "caching_policy": {
+          "raw_value": "max-age=43200",
+          "is_cached": true,
+          "has_no_store": false,
+          "has_private": false,
+          "observation": "Response permits public/client caching without 'no-store'."
+        },
+        "cors_configuration": {
+          "access-control-allow-credentials": "true",
+          "vary": "Origin, Accept-Encoding"
+        },
+        "rate_limit_headers": {
+          "x-ratelimit-limit": "3600000",
+          "x-ratelimit-remaining": "3599996",
+          "x-ratelimit-reset": "1790812826"
+        }
+      },
+      "body_checks": {
+        "record_count": 5,
+        "data_type": "list",
+        "exposed_pii_fields": [
+          "email",
+          "email (email-value)"
+        ],
+        "suspicious_keys_found": [],
+        "sample_structure": {
+          "postId": "int",
+          "id": "int",
+          "name": "str",
+          "email": "str",
+          "body": "str"
+        },
+        "data_minimization_notes": [
+          "Endpoint returns contact information (email/phone) in plain text."
+        ]
+      },
+      "authentication_required": true
+    },
+    {
+      "endpoint": "/todos/1",
+      "method": "GET",
+      "status_code": 200,
+      "content_type": "application/json; charset=utf-8",
+      "is_json": true,
+      "response_size_bytes": 83,
+      "response_time_ms": 51.18,
+      "header_checks": {
+        "present_security_headers": {
+          "X-Content-Type-Options": {
+            "header": "x-content-type-options",
+            "value": "nosniff",
+            "purpose": "Prevents MIME-type sniffing by clients.",
+            "browser_specific": true
+          },
+          "Cache-Control": {
+            "header": "cache-control",
+            "value": "max-age=43200",
+            "purpose": "Governs browser and proxy caching of potentially sensitive responses.",
+            "browser_specific": false
+          }
+        },
+        "missing_security_headers": {
+          "Strict-Transport-Security (HSTS)": {
+            "header": "strict-transport-security",
+            "purpose": "Enforces HTTPS connections and prevents SSL stripping attacks.",
+            "browser_specific": true,
+            "recommendation": "max-age=31536000; includeSubDomains; preload"
+          },
+          "Content-Security-Policy (CSP)": {
+            "header": "content-security-policy",
+            "purpose": "Restricts resource loading origins; mitigates XSS and injection in browsers.",
+            "browser_specific": true,
+            "recommendation": "default-src 'none'; frame-ancestors 'none'"
+          },
+          "X-Frame-Options": {
+            "header": "x-frame-options",
+            "purpose": "Prevents embedding in frames/iframes to protect against clickjacking.",
+            "browser_specific": true,
+            "recommendation": "DENY"
+          }
+        },
+        "information_disclosure": {
+          "server": "cloudflare",
+          "x-powered-by": "Express"
+        },
+        "caching_policy": {
+          "raw_value": "max-age=43200",
+          "is_cached": true,
+          "has_no_store": false,
+          "has_private": false,
+          "observation": "Response permits public/client caching without 'no-store'."
+        },
+        "cors_configuration": {
+          "access-control-allow-credentials": "true",
+          "vary": "Origin, Accept-Encoding"
+        },
+        "rate_limit_headers": {
+          "x-ratelimit-limit": "1000",
+          "x-ratelimit-remaining": "999",
+          "x-ratelimit-reset": "1786063423"
+        }
+      },
+      "body_checks": {
+        "record_count": 1,
+        "data_type": "dict",
+        "exposed_pii_fields": [],
+        "suspicious_keys_found": [],
+        "sample_structure": {
+          "userId": "int",
+          "id": "int",
+          "title": "str",
+          "completed": "bool"
+        },
+        "data_minimization_notes": []
+      },
+      "authentication_required": true
+    }
+  ]
+}
