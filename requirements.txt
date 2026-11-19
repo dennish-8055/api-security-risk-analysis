@@ -1,4 +1,4 @@
-# FUTURE INTERNS - CYBER SECURITY TASK 3 (2026)
+# CYBER SECURITY TASK 3 (2026)
 # API Security Risk Analysis Tool Dependencies
 
 # HTTP client library for secure, read-only GET requests
