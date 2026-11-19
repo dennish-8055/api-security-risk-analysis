@@ -1,6 +1,6 @@
 # API Security Risk Analysis
 
-**Future Interns – Cyber Security Internship Program 2026**  
+**Cyber Security Internship Program 2026**  
 **Task 3: API Security Risk Analysis**  
 **Assessment Target:** JSONPlaceholder REST API (`https://jsonplaceholder.typicode.com`)  
 **Auditor:** Senior Application Security (AppSec) Engineer / Security Auditor  
@@ -10,7 +10,7 @@
 
 ## 1. Project Overview
 
-This repository contains the complete implementation, automated tooling, test suite, and formal technical documentation for **Future Interns Cyber Security Task 3 (2026)**.
+This repository contains the complete implementation, automated tooling, test suite, and formal technical documentation for **Cyber Security Task 3 (2026)**.
 
 The project performs an evidence-based, defensive, read-only API security risk assessment against a safe public demonstration REST API: **JSONPlaceholder**. The assessment inspects public endpoint architectures, HTTP response headers, data minimization behaviors, rate-limiting exposure, and error responses, evaluating all observations against the **OWASP API Security Top 10 (2023)** standard and the **Shieldfy API Security Checklist**.
 
