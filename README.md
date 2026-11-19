@@ -87,7 +87,7 @@ The audit evaluates six representative endpoints illustrating core RESTful desig
 ## 6. Project Structure
 
 ```
-FUTURE_CS_03/
+api-security-risk-analysis/
 │
 ├── README.md                                  # Root documentation and project overview
 ├── requirements.txt                           # Project dependencies (requests, reportlab)
